@@ -335,6 +335,8 @@ public class FastScrollRecyclerView extends RecyclerView implements RecyclerView
         if (getAdapter() instanceof MeasurableAdapter) {
             MeasurableAdapter measurer = (MeasurableAdapter) getAdapter();
             int viewTop = (int) (touchFraction * calculateAdapterHeight());
+            //int top = calculateScrollDistanceToPosition(0);
+            //int bottom = calculateScrollDistanceToPosition(getAdapter().getItemCount());
 
             for (int i = 0; i < getAdapter().getItemCount(); i++) {
                 int top = calculateScrollDistanceToPosition(i);
@@ -440,16 +442,30 @@ public class FastScrollRecyclerView extends RecyclerView implements RecyclerView
 
         int totalHeight = 0;
         MeasurableAdapter measurer = (MeasurableAdapter) getAdapter();
-
-        // TODO Take grid layouts into account
-
-        for (int i = 0; i < adapterIndex; i++) {
-            mScrollOffsets.put(i, totalHeight);
-            int viewType = getAdapter().getItemViewType(i);
-            totalHeight += measurer.getViewTypeHeight(this, findViewHolderForAdapterPosition(i), viewType);
+        if (getLayoutManager() instanceof GridLayoutManager) {
+            // Grid
+            int rowCount;
+            int spanCount = ((GridLayoutManager) getLayoutManager()).getSpanCount();
+            if (adapterIndex % spanCount != 0) {
+                rowCount = (int) Math.ceil((double) adapterIndex / spanCount) + (spanCount + adapterIndex % spanCount);
+            } else {
+                rowCount = (int) Math.ceil((double) adapterIndex / spanCount);
+            }
+            for (int i = 0; i < rowCount; i++) {
+                mScrollOffsets.put(i, totalHeight);
+                int viewType = getAdapter().getItemViewType(i);
+                totalHeight += measurer.getViewTypeHeight(this, findViewHolderForAdapterPosition(i), viewType);
+            }
+            mScrollOffsets.put(rowCount, totalHeight);
+        } else {
+            // Linear
+            for (int i = 0; i < adapterIndex; i++) {
+                mScrollOffsets.put(i, totalHeight);
+                int viewType = getAdapter().getItemViewType(i);
+                totalHeight += measurer.getViewTypeHeight(this, findViewHolderForAdapterPosition(i), viewType);
+            }
+            mScrollOffsets.put(adapterIndex, totalHeight);
         }
-
-        mScrollOffsets.put(adapterIndex, totalHeight);
         return totalHeight;
     }
 
